@@ -1,0 +1,14 @@
+config global
+    option auto_mode 'hybrid'
+    option scan_interval '300'
+    option default_channel '6'
+
+config network 'default'
+    option enabled '1'
+    option comm_id '0x01009B90006DC000'
+    option game_mode '1'
+    option max_players '8'
+    option node_name 'OpenWrt'
+    option app_version '6'
+    option password 'LunchPack2'
+    option app_data 'hex:0000000000000000'
