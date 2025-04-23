@@ -1,0 +1,195 @@
+LDN Protocol Implementation Guide for OpenWrt
+=============================================
+
+Table of Contents
+-----------------
+1. Build & Installation
+2. Configuration
+3. Service Management
+4. Monitoring & Diagnostics
+5. Advanced Usage
+6. Troubleshooting
+
+1. Build & Installation
+=======================
+
+1.1 System Requirements
+- OpenWrt 24.02+ (stable)
+- 64MB RAM (128MB recommended)
+- 8MB+ free storage
+- 802.11 wireless interface with monitor mode support
+
+1.2 Build Environment Setup
+----------------------------
+# On Ubuntu/Debian build system
+sudo apt update
+sudo apt install build-essential libncurses-dev unzip git python3
+git clone https://git.openwrt.org/openwrt/openwrt.git
+cd openwrt
+./scripts/feeds update -a
+./scripts/feeds install -a
+git clone https://github.com/your-repo/ldn-openwrt.git package/ldn
+
+1.3 Compilation
+---------------
+make menuconfig
+# Select:
+#   Target System -> Your device architecture
+#   Subtarget -> Your device specific selection
+#   Network -> LDN Protocol
+#   LuCI -> Applications -> luci-app-ldn
+
+make -j$(nproc) package/ldn/compile
+
+1.4 Installation on Device
+--------------------------
+scp bin/packages/*/base/ldn*.ipk root@openwrt-router:/tmp/
+scp bin/packages/*/luci/luci-app-ldn*.ipk root@openwrt-router:/tmp/
+
+# On router:
+opkg update
+opkg install /tmp/ldn*.ipk
+opkg install libopenssl libnl-core libnl-genl libubus libubox
+
+2. Configuration
+================
+
+2.1 Basic UCI Configuration
+---------------------------
+uci set ldn.@global[0]=global
+uci set ldn.@global[0].auto_mode='hybrid'
+uci set ldn.@global[0].scan_interval='300'
+uci set ldn.@global[0].default_channel='6'
+
+uci set ldn.@network[0]=network
+uci set ldn.@network[0].comm_id='0x01009B90006DC000'
+uci set ldn.@network[0].game_mode='1'
+uci set ldn.@network[0].max_players='8'
+uci set ldn.@network[0].password='YourSecurePassword'
+uci commit ldn
+
+2.2 LuCI Web Interface
+----------------------
+Access via: http://router-ip/cgi-bin/luci/admin/network/ldn
+
+Configure:
+- Operation Mode (AP/STA/Hybrid)
+- Network Parameters
+- Security Settings
+- Advanced Options
+
+3. Service Management
+=====================
+
+3.1 Basic Control
+-----------------
+# Start/Stop/Restart
+/etc/init.d/ldn start
+/etc/init.d/ldn stop
+/etc/init.d/ldn restart
+
+# Enable autostart
+/etc/init.d/ldn enable
+
+3.2 UBUS Commands
+-----------------
+# Create network
+ubus call ldn create_network '{"channel": 11}'
+
+# Join network
+ubus call ldn join_network '{"bssid": "AA:BB:CC:DD:EE:FF"}'
+
+# Get status
+ubus call ldn get_status
+
+# Reload config
+ubus call ldn reload_config
+
+4. Monitoring & Diagnostics
+===========================
+
+4.1 Basic Monitoring
+--------------------
+# Real-time logs
+logread -f | grep ldn
+
+# Wireless status
+iwinfo wlan0 info
+
+# Connected stations
+iw dev wlan0 station dump
+
+4.2 Advanced Diagnostics
+------------------------
+# Packet capture
+tcpdump -i ldn0 -nn -e -s0 -v
+
+# Throughput test
+iperf3 -s (on host)
+iperf3 -c 169.254.1.1 -t 30
+
+5. Advanced Usage
+=================
+
+5.1 Channel Management
+----------------------
+# Set specific channel
+ubus call ldn set_channel '{"channel": 11}'
+
+# Channel scan
+ldn-scan -c 1,6,11 -v
+
+5.2 Security Features
+---------------------
+# MAC filtering
+uci add_list ldn.@security[0].allowed_macs='AA:BB:CC:DD:EE:FF'
+uci commit ldn
+
+# Session timeout
+uci set ldn.@security[0].session_timeout='3600'
+
+6. Troubleshooting
+==================
+
+6.1 Common Issues
+-----------------
+# Interface not found
+dmesg | grep ldn
+uci set network.ldn.ifname='wlan0'
+
+# Authentication failures
+rm /etc/ldn.key
+/etc/init.d/ldn restart
+
+# Channel conflicts
+iw dev wlan0 scan freq 2412
+uci set ldn.@global[0].default_channel='11'
+
+6.2 Diagnostic Commands
+-----------------------
+# Verify service status
+ubus call ldn get_status
+
+# Check wireless capabilities
+iw phy phy0 info
+
+# Test protocol implementation
+ldn-scan -v -c 1,6,11
+
+# Verify package dependencies
+opkg list-installed | grep -E 'ldn|openssl|libnl'
+
+Key Features
+------------
+- Automatic network discovery
+- Dual AP/STA mode operation
+- Secure session management
+- Real-time monitoring
+- LuCI web interface
+- UBUS API integration
+
+Support
+-------
+- Documentation: https://github.com/your-repo/docs
+- Issues: https://github.com/your-repo/issues
+- Forum: https://forum.openwrt.org/tag/ldn
